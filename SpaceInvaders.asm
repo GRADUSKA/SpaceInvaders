@@ -84,46 +84,63 @@ DOWN_KEY 		equ 	$472
 ; ==============================
 ; Programme principal
 ; ==============================
+
+
+; ================================
+;	FEW PRECISION:
+;	LEA = Load Effective Address
+;	It is used to change the address pointed by the register
+;	Very usefull for moving	all the objects in this project
+;	ALL FONCTIONS THAT ARE NOT EXPLAINED ARE FONCTIONS THAT WHERE GIVEN OR CORRECTED AT A MOMENT (MOST LIKELY BY DAVID BOUCHET)
+; ================================
 			org 	$500
 			
 Main 		
-			move.b	#0,IsColliding
-			move.b	#42,WithBonus
+			move.b	#0,IsColliding	;to Verify the Collision beteween Y or N for the bonus
+			move.b	#42,WithBonus	; Boolean to verify if the user shoot on the bonus
 \bonus
 			lea	dybp,a0
-			move.b #10,d1
-            move.b #39,d2
+			
+			move.b #10,d1	;	Position of the print
+            move.b #39,d2	;	Also position of the print	
+            
             jsr     Print
-			jsr PrintDYPN
-			jsr PrintDYPB
+            
+			jsr PrintDYPN	;Print the Y
+			jsr PrintDYPB	;Print the N
+
 			jsr PrintShip
 			jsr PrintShipShot
+			
 			jsr BufferToScreen
+			
 			jsr MoveShip
 			jsr	MoveShipShot
 			jsr	NewShipShot
-			lea.l	ShipShot,a1
+			
+			lea.l	ShipShot,a1	;All of this is for verify if the shipshot collide with the Y
 			lea.l	DYPN,a2
 			jsr	IsSpriteColliding
 			beq	\Withbonus
 			
-			lea.l	ShipShot,a1
+			lea.l	ShipShot,a1 ;Same thing as before but for the N
 			lea.l	DYPB,a2
 			jsr IsSpriteColliding
 			beq	\Withoutbonus
-			bra \bonusloop
+			
+			bra \bonusloop ;if the shipshot dosent collide with Y or N
 			
 \Withbonus
-			move.b #1,WithBonus
+			move.b #1,WithBonus ;Boolean for after that the Bonus is wanted ~TRUE
 			move.w #HIDE,STATE(a1)
 			bra	\init
 \Withoutbonus
-			move.b #0,WithBonus
+			move.b #0,WithBonus ;Same ~FALSE
 			move.w #HIDE,STATE(a1)
 			bra	\init
 			
 \bonusloop
-			cmp.b	#42,WithBonus
+			cmp.b	#42,WithBonus ; to see if it has changed equivalent to while (WithBonus == 42) do the loop that decide if the user wants the bonus or NOT;
 			beq		\bonus
 \init
 			jsr InitInvaders
@@ -145,27 +162,32 @@ Main
 			jsr MoveBonus
 			lea.l	ShipShot,a1
 			lea.l	Bonus,a2
-			jsr	IsSpriteColliding
+			jsr	IsSpriteColliding ;If the shipshot collides to the bonus : IsColliding = 1, Hide the Shot Hide the Bonus
 			beq	\collision
+			
 			move.b	IsColliding,d5
-			and.b	WithBonus,d5
-			cmp.b	#1,d5
-			bne		\uno
+			and.b	WithBonus,d5 ;This line is to verify that the user wanted to play with the bonus (because the bonus is here even if you shoot on N)
+			cmp.b	#1,d5	;d5 == 1 if and only if the user shoot on the bonus and wanted to play with bonus;
+			
+			bne		\uno	;if D5 != 0 three shots
 			jsr	MoveShipShot
 			jsr	MoveShipShot2
 			jsr	MoveShipShot3
+			
 			jsr MoveInvaderShots
+			
 			jsr	NewShipShot
 			jsr NewInvaderShot
+			
 			jsr	NewShipShot2
 			jsr	NewShipShot3
 			
 			jsr SpeedInvaderUp
-			jsr IsGameOver
+			jsr IsGameOver ;to see if the game is over
 			beq \game_over
-			bra \loop
+			bra \loop 
 			
-\uno	
+\uno	;Classic game one shot at one time
 			jsr	MoveShipShot
 			jsr MoveInvaderShots
 			jsr	NewShipShot
@@ -187,7 +209,7 @@ Main
             beq     \print
             lea     lose,a0
             
-\print      move.b #20,d1
+\print      move.b #20,d1	;Position X and Y of the print
             move.b #39,d2
             jsr     Print
             
@@ -847,24 +869,25 @@ MoveInvaders
 			
 \skip 		dc.w 1
 
-GetBonusStep
+GetBonusStep ;Fonction to see if the bonus needs to change direction i.e. : if the bonus touches a wall or the ceiling or the ground (I think it can goes in the ship)
 			movem.l d0/d3/d4,-(a7)
 			
-			move.w BonusX,d0
-			move.w BonusY,d4
-			add.w BonusCurrentStepX,d0
-			add.w BonusCurrentStepY,d4
+			move.w BonusX,d0 ;Moving the actual X position of the Bonus
+			move.w BonusY,d4 ;Moving the actual Y position of the BONUS
+			
+			add.w BonusCurrentStepX,d0	;Add the Current Step of the X
+			add.w BonusCurrentStepY,d4	;Same thing for Y
 
-			cmpi.w #BONUS_X_MIN,d0
+			cmpi.w #BONUS_X_MIN,d0	;If BONUS_X + STEP_X (STEP IS NEGATIVE) < MIN_X_POSITION CHANGE THE STEP (BECOME POSITIVE) 
 			blt \changeX
 
-			cmpi.w #BONUS_X_MAX,d0
+			cmpi.w #BONUS_X_MAX,d0	;If BONUS_X + STEP_X (STEP IS POSITIVE) > MAX_X_POSITION CHANGE THE STEP (BECOME NEGATIVE)
 			bgt \changeX
 			
-			cmpi.w #BONUS_Y_MIN,d4
+			cmpi.w #BONUS_Y_MIN,d4	;If BONUS_Y + STEP_Y (STEP IS NEGATIVE) < MIN_XYOSITION CHANGE THE STEP (BECOME POSITIVE)
 			blt \changeY
 
-			cmpi.w #BONUS_Y_MAX,d4
+			cmpi.w #BONUS_Y_MAX,d4	;If BONUS_Y + STEP_Y (STEP IS POSITIVE) > MAX_Y_POSITION CHANGE THE STEP (BECOME NEGATIVE)
 			bgt \changeY
 \noChange 
 			move.w BonusCurrentStepX,d1
@@ -893,12 +916,12 @@ GetBonusStep
 MoveBonus
 			movem.l d1/d2/a1/d7,-(a7)
 			
-			jsr GetBonusStep
+			jsr GetBonusStep	;GET THE STEP OF THE BONUS FOR X AND Y
 			
-			lea Bonus,a1
+			lea Bonus,a1	;A1 is now pointing to the BONUS AKA THE BALL
 			
 \loop 
-			cmp.w #HIDE,STATE(a1)
+			cmp.w #HIDE,STATE(a1)	;IF THE BALL IS HIDE WE CONTINUE (WE DONT MOVE THE BALL)
 			beq \continue
 			
 			jsr MoveSprite
@@ -911,13 +934,13 @@ MoveBonus
 			rts
 
 			
-SwapBitmap 
+SwapBitmap ;USEFULL FOR A LITTLE ANIMATION
 			move.l BITMAP1(a1),-(a7)
 			move.l BITMAP2(a1),BITMAP1(a1)
 			move.l (a7)+,BITMAP2(a1)
 			rts
 			
-DestroyInvaders 
+DestroyInvaders ;IF THERE IS A COLLISION WE DESTROY THE INVADERS
 			movem.l d7/a1/a2,-(a7)
 			
 			lea Invaders,a1
@@ -938,7 +961,7 @@ DestroyInvaders
 			movem.l (a7)+,d7/a1/a2
 			rts
 
-DestroyInvaders2 
+DestroyInvaders2 ;ALL FONCTIONS MARKED WITH *2 AND *3 ARE USED FOR THE 2nd AND 3rd SHIPSHOT
 			movem.l d7/a1/a2,-(a7)
 			
 			lea Invaders,a1
@@ -1059,7 +1082,7 @@ ConnectInvaderShot
 \quit 
 			movem.l (a7)+,d1/d2/d3/a0/a1
 			rts
-
+;This is a random fonction I Dont really know how it works...
 Random 		move.l \old,d0
 			muls.w #16807,d0
 			and.l #$7fffffff,d0
